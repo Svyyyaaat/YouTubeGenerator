@@ -431,7 +431,7 @@ def make_video(channelXfile_nameXspeech):
                  ffmpeg.input(r'video\\temp_rabbit.png')],
                 'overlay', 9999, 9999,
                 enable='between(t, 0, 3)')
-        .output(f'video/{channel}/{file_name}_silent_frame.mp4')
+        .output(f'video/{channel}/{file_name}_silent_overlayed.mp4')
         .run()
     )
 
@@ -455,7 +455,7 @@ def make_video(channelXfile_nameXspeech):
     audio.write_audiofile(f"audio/{channel}/{file_name}_with_music.mp3")
 
     # combining silent&not-subbed video, audio and subs
-    video = ffmpeg.input(f'video\\{channel}\\{file_name}_silent_frame.mp4')
+    video = ffmpeg.input(f'video\\{channel}\\{file_name}_silent_overlayed.mp4')
     audio = ffmpeg.input(f"audio/{channel}/{file_name}_with_music.mp3")
 
     (
@@ -484,20 +484,56 @@ def make_video(channelXfile_nameXspeech):
     os.remove(f"audio/{channel}/{file_name}.srt")
     os.remove(f"audio/{channel}/{file_name}.mp3")
 
+def check_and_create_file(directory, filename):
+    # Check if the directory exists, if not, create it
+    if not os.path.exists(directory):
+        try:
+            os.makedirs(directory)
+            print(f"Directory '{directory}' created successfully.")
+        except Exception as e:
+            print(f"Error creating directory '{directory}': {e}")
+
+    # Check if the file exists in the directory
+    filepath = os.path.join(directory, filename)
+    if os.path.exists(filepath):
+        return 1
+    else:
+        # If the file doesn't exist, create it
+        try:
+            with open(filepath, 'w'):
+                pass
+            print(f"File '{filename}' created successfully in '{directory}'.")
+        except Exception as e:
+            print(f"Error creating file '{filename}' in '{directory}': {e}")
+
+# Example usage:
+
 if __name__ == "__main__":
 
     #channel_list = os.listdir('channels')
-    channel_list = ['Empathy Elevator - Teaching Empathy and Emotional Intelligence.txt'] * 3
+    channel_list = ['Empathy Elevator - Teaching Empathy and Emotional Intelligence.txt',
+                    'Empathy for Kids - Teaching Empathy and Emotional Intelligence to young children.txt',
+                    'Road to MIT - Writing stellar essays for MIT']
+
+    # creating folders for first-time used channels
+    for channel in channel_list:
+        if not check_and_create_file(directory='channels', filename=channel):
+            check_and_create_file(directory=f'video/{channel[:-4]}', filename=channel)
+            check_and_create_file(directory=f'audio/{channel[:-4]}', filename=channel)
+
+    # writing text
     speech_pool = Pool()
     channelXtopicsXspeeches_list = speech_pool.map(get_speech, channel_list)
     speech_pool.close()
     speech_pool.join()
 
+    # voicing text
     voice_pool = Pool()
     voice_pool.map(say_w, channelXtopicsXspeeches_list)
     voice_pool.close()
     voice_pool.join()
 
+    # preparing videos
     for channelXtopicXspeech in channelXtopicsXspeeches_list:
         try:
             make_video(channelXtopicXspeech)
