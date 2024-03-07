@@ -18,8 +18,7 @@ import stable_whisper
 #from TTS.utils.synthesizer import Synthesizer
 
 OPENAI_TOKEN = '' # insert openai token here
-FONT_PATH = '' # insert path to font file
-# example: r'C:\Users\USERNAME\AppData\Local\Microsoft\Windows\Fonts\unicode.futurab.ttf'
+FONT_PATH = r'fonts\unicode.futurab.ttf' # insert path to font file (for thumbnail gen)
 
 def ask(question):
     client = OpenAI(api_key = OPENAI_TOKEN)
@@ -61,7 +60,7 @@ def get_speech(channel):
             t = 1
             match = ['canada']
             while t <= 5:
-                speech_request = f'Write a speech for a one minute TikTok video on the topic of {main_topic}. The channel name is {channel_name} and it\'s dedicated to {channel_theme}. Make a unique practical advice accompanied by a story explaining why it is important to follow the advice and how to follow it. The story must be concise, practical, and interesting in itself, just like a novel or a tale. Don\'t write stuff like "Sarah and Mark had a disagreement about their future plans, but by active listening they found a compromise", write stuff like "Sarah wanted to move to Canada from the US, and Mark wanted to stay at the US. Instead of arguing why it\'s better to stay at the US, Mark tried to understand why Sarah tried to leave in the first place. It turned out that she wanted to get as far as possible from her toxic family, so Mark helped to make the relationship with her family better, therefore removing the need to move from the US". Do not use this exact story or one with a similar plot. It is very important that you don\'t use this exact story or one with a similar plot. Use names in your stories. Use specifics. Keep the text concise. End the text when the story ends, don\'t explain it too much. Don\'t say "embark on a journey", "world", "wonderful", "captivating", "thrilled", "fascinating", and similar strong adjectives, use something more relaxed. The host is a woman with MBTI INFJ type, genuinely caring about her viewers and willing to improve their life. Make the speech sound conversational. Call viewers simply "viewers of {channel_name}", without any adjectives. Don\'t write a script, write only the speech. I want you to simply write the text for reading without mentioning actions or roles. Don\'t put in stuff like "music playing" or "host: %host speech%". Give me the title, the speech, and your comments if you have any in the following format: "Title: ... \nSpeech: ... \nChatGPT comment: ...'
+                speech_request = f'Write an extremely short speech for a 30 seconds YouTube video on the topic of {main_topic}. The channel name is {channel_name} and it\'s dedicated to {channel_theme}. Make a unique practical advice accompanied by a story explaining why it is important to follow the advice and how to follow it. The story must be concise, practical, and interesting in itself, just like a novel or a tale. Don\'t write stuff like "Sarah and Mark had a disagreement about their future plans, but by active listening they found a compromise", write stuff like "Sarah wanted to move to Canada from the US, and Mark wanted to stay at the US. Instead of arguing why it\'s better to stay at the US, Mark tried to understand why Sarah tried to leave in the first place. It turned out that she wanted to get as far as possible from her toxic family, so Mark helped to make the relationship with her family better, therefore removing the need to move from the US". Do not use this exact story or one with a similar plot. It is very important that you don\'t use this exact story or one with a similar plot. Use names in your stories. Use specifics. Keep the text concise. End the text when the story ends, don\'t explain it too much. Don\'t say "embark on a journey", "world", "wonderful", "captivating", "thrilled", "fascinating", and similar strong adjectives, use something more relaxed. The host is a woman with MBTI INFJ type, genuinely caring about her viewers and willing to improve their life. Make the speech sound conversational. Call viewers simply "viewers of {channel_name}", without any adjectives. Don\'t write a script, write only the speech. I want you to simply write the text for reading without mentioning actions or roles. Don\'t put in stuff like "music playing" or "host: %host speech%". Give me the title, the speech, and your comments if you have any in the following format: "Title: ... \nSpeech: ... \nChatGPT comment: ...'
 
                 speech = ask(speech_request)
 
@@ -72,6 +71,7 @@ def get_speech(channel):
                                         f'"lovely viewers" - replace it. ' \
                                         f'If there\'s any story about Sarah, Mark, or about someone moving from one country to another, ' \
                                         f'replace it with a completely different story. That\'s the most important part of your task.' \
+                                        f'\nKeep the text extremely short, no longer than 30 seconds to read' \
                                         f'\nGive me the title, the speech, ' \
                                         f'and your comments if you have any in the following format: ' \
                                         f'"Title: ... \nSpeech: ... \nChatGPT comment: ...\nHere\'s the original script: "{speech}"'
@@ -322,11 +322,19 @@ def make_video(channelXfile_nameXspeech):
         clips.append(c)
     final_video = concatenate_videoclips(clips)
 
-    final_video.write_videofile(f'video/{channel}/{file_name}_silent.mp4', threads=32, fps=30)
+    final_video.write_videofile(f'video/{channel}/{file_name}_silent_overlayed.mp4', threads=32, fps=30)
+
+    # breaking the text
+    text = file_name
+    end_pt = text.find(';')
+    if end_pt != -1:
+        text = text[:end_pt]
+
+    text_list = text.split()
 
     # putting intro overlay
-    # (didn't turn out well so turned it off, but certain parts of the function are still required)
-
+    # (didn't turn out well so turned it off)
+    """
     animals_shock_raw = os.scandir('thumbnail/animals_shock')
     backgrounds_raw = os.scandir('thumbnail/backgrounds')
 
@@ -348,16 +356,6 @@ def make_video(channelXfile_nameXspeech):
         .output(f'video/{channel}/{file_name}_silent_frame.mp4')
         .run()
     )
-
-    text = file_name
-
-    # breaking the text
-    end_pt = text.find(';')
-    if end_pt != -1:
-        text = text[:end_pt]
-
-    text_list = text.split()
-
     # writing the text
     i = 0
     while i < len(text_list):
@@ -434,6 +432,7 @@ def make_video(channelXfile_nameXspeech):
         .output(f'video/{channel}/{file_name}_silent_overlayed.mp4')
         .run()
     )
+    """
 
     # making subs
     print(f"making subs for {file_name}")
@@ -474,11 +473,12 @@ def make_video(channelXfile_nameXspeech):
     )
 
     # getting rid of composing files
-    os.remove(f'video/{channel}/{file_name}_silent.mp4')
-    os.remove(f'video/{channel}/{file_name}_silent_frame.mp4')
-    os.remove(f'video/{channel}/{file_name}_silent_frame_text.mp4')
-    for i in range(len(text_list)-1):
-        os.remove(f'video/{channel}/{file_name}_silent_frame_text{i}.mp4')
+
+    #os.remove(f'video/{channel}/{file_name}_silent.mp4')
+    #os.remove(f'video/{channel}/{file_name}_silent_frame.mp4')
+    #os.remove(f'video/{channel}/{file_name}_silent_frame_text.mp4')
+    #for i in range(len(text_list)-1):
+    #    os.remove(f'video/{channel}/{file_name}_silent_frame_text{i}.mp4')
     os.remove(f'C:video\\{channel}\\{file_name}_silent_overlayed.mp4')
     os.remove(f"audio/{channel}/{file_name}_with_music.mp3")
     os.remove(f"audio/{channel}/{file_name}.srt")
@@ -513,7 +513,7 @@ if __name__ == "__main__":
     #channel_list = os.listdir('channels')
     channel_list = ['Empathy Elevator - Teaching Empathy and Emotional Intelligence.txt',
                     'Empathy for Kids - Teaching Empathy and Emotional Intelligence to young children.txt',
-                    'Road to MIT - Writing stellar essays for MIT']
+                    'Road to MIT - Admissions Secrets (100% legit).txt']
 
     # creating folders for first-time used channels
     for channel in channel_list:
