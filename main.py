@@ -22,7 +22,7 @@ FONT_PATH = '' # insert path to font file
 # example: r'C:\Users\USERNAME\AppData\Local\Microsoft\Windows\Fonts\unicode.futurab.ttf'
 
 def ask(question):
-    client = OpenAI(api_key = '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')
+    client = OpenAI(api_key = OPENAI_TOKEN)
     answer = client.chat.completions.create(model='gpt-4', messages=[
                                      {"role": "user", "content": question}]).choices[0].message.content
     return(answer)
@@ -246,7 +246,7 @@ def get_thumbnail(text):
         box=1,
         boxborderw='20',
         fontsize=FONT_SIZE,
-        fontfile=r'C:\Users\Svyat\AppData\Local\Microsoft\Windows\Fonts\unicode.futurab.ttf'
+        fontfile=FONT_PATH
     ).output(r'thumbnail\text_image.png').run()
 
     # combining background and rabbit
@@ -406,7 +406,7 @@ def make_video(channelXfile_nameXspeech):
             box=1,
             boxborderw='20',
             fontsize=FONT_SIZE,
-            fontfile=r'C:\\Users\\Svyat\\AppData\\Local\\Microsoft\\Windows\\Fonts\\unicode.futurab.ttf',
+            fontfile=FONT_PATH,
             enable='between(t, 0, 6)'
         ).output(output_video).run()
 
