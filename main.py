@@ -1,4 +1,5 @@
 from openai import OpenAI
+from anthropic import Anthropic
 import os
 import asyncio
 import edge_tts
@@ -14,22 +15,43 @@ from moviepy.audio.fx.audio_fadeout import audio_fadeout
 from moviepy.audio.fx.volumex import volumex
 from random import sample, randint, choice
 import stable_whisper
-#from TTS.utils.manage import ModelManager
-#from TTS.utils.synthesizer import Synthesizer
+import gradio as gr
 
-OPENAI_TOKEN = '' # insert openai token here
-FONT_PATH = r'fonts\unicode.futurab.ttf' # insert path to font file (for thumbnail gen)
+# from TTS.utils.manage import ModelManager
+# from TTS.utils.synthesizer import Synthesizer
+
+OPENAI_TOKEN = ''  # insert openai token here
+CLAUDE_TOKEN = ''
+FONT_PATH = r'fonts\unicode.futurab.ttf'  # insert path to font file (for thumbnail gen)
+MODEL = "claude" # claude or chatgpt (copy and paste)
 
 def ask(question):
-    client = OpenAI(api_key = OPENAI_TOKEN)
-    answer = client.chat.completions.create(model='gpt-4', messages=[
-                                     {"role": "user", "content": question}]).choices[0].message.content
-    return(answer)
+    if MODEL == 'claude':
+        client = Anthropic(
+            # This is the default and can be omitted
+            api_key=CLAUDE_TOKEN,
+        )
+        message = client.messages.create(
+            #model="claude-instant-1.2",
+            model="claude-3-opus-20240229",
+            max_tokens=1024,
+            messages=[
+                {"role": "user", "content": question}
+            ]
+        )
+        return list(message.content[0])[0][1]
+    elif MODEL == 'chatgpt':
+        client = OpenAI(api_key=OPENAI_TOKEN)
+        answer = client.chat.completions.create(model='gpt-4', messages=[
+            {"role": "user", "content": question}]).choices[0].message.content
+        return (answer)
+
+
 
 # make a speech
 def get_speech(channel):
     # in case of network errors, functions may try again
-    for i in range(0, 5):
+    for i in range(0, 1):
         try:
             channel_name = channel[:channel.find(' - ')]
             channel_theme = channel[channel.find(' - ') + 3:-4]
@@ -38,7 +60,8 @@ def get_speech(channel):
 
             # getting a topic
             t = 0
-            while t <= 5:
+            while t <= 3:
+                t+=1
                 print(f"making a topic for the channel {channel_name}")
                 if len(used_topics) != 0:
                     used_topics_str = '"' + '", "'.join(used_topics) + '"'
@@ -46,7 +69,8 @@ def get_speech(channel):
                 else:
                     topic_request = f'Come up with 5 interesting and original viral video ideas for a YouTube channel dedicated to the theme of "{channel_theme}". Think who can be the target audience of the channel and make ideas according to it. In your answer write only the list of topics, don\'t describe them.'
                 suggested_topics = ask(topic_request)
-                main_topic = ask(f'Choose the best topic for a viral YouTube video of a channel dedicated to {channel_theme} among the ones listed here: "{suggested_topics}". In your answer write only the topic. Refrase it so there will be ":", like in "Relationships Empathy: Nurturing Healthy Connections". Make the topic concise.')
+                main_topic = ask(
+                    f'Choose the best topic for a viral YouTube video of a channel dedicated to {channel_theme} among the ones listed here: "{suggested_topics}". In your answer write only the topic. Refrase it so there will be ":", like in "Relationships Empathy: Nurturing Healthy Connections". Make the topic concise.')
 
                 if len(main_topic) < 100:
                     print(f"{main_topic} is the topic for the channel {channel_name}")
@@ -60,31 +84,30 @@ def get_speech(channel):
             t = 1
             match = ['canada']
             while t <= 5:
-                speech_request = f'Write an extremely short speech for a 30 seconds YouTube video on the topic of {main_topic}. The channel name is {channel_name} and it\'s dedicated to {channel_theme}. Make a unique practical advice accompanied by a story explaining why it is important to follow the advice and how to follow it. The story must be concise, practical, and interesting in itself, just like a novel or a tale. Don\'t write stuff like "Sarah and Mark had a disagreement about their future plans, but by active listening they found a compromise", write stuff like "Sarah wanted to move to Canada from the US, and Mark wanted to stay at the US. Instead of arguing why it\'s better to stay at the US, Mark tried to understand why Sarah tried to leave in the first place. It turned out that she wanted to get as far as possible from her toxic family, so Mark helped to make the relationship with her family better, therefore removing the need to move from the US". Do not use this exact story or one with a similar plot. It is very important that you don\'t use this exact story or one with a similar plot. Use names in your stories. Use specifics. Keep the text concise. End the text when the story ends, don\'t explain it too much. Don\'t say "embark on a journey", "world", "wonderful", "captivating", "thrilled", "fascinating", and similar strong adjectives, use something more relaxed. The host is a woman with MBTI INFJ type, genuinely caring about her viewers and willing to improve their life. Make the speech sound conversational. Call viewers simply "viewers of {channel_name}", without any adjectives. Don\'t write a script, write only the speech. I want you to simply write the text for reading without mentioning actions or roles. Don\'t put in stuff like "music playing" or "host: %host speech%". Give me the title, the speech, and your comments if you have any in the following format: "Title: ... \nSpeech: ... \nChatGPT comment: ...'
+                speech_request = f'Write an extremely short speech (no longer than 200 words) for a 30 seconds YouTube video on the topic of {main_topic}. The channel name is {channel_name} and it\'s dedicated to {channel_theme}. Make a unique practical advice accompanied by a story explaining why it is important to follow the advice and how to follow it. The story must be reasonable and believable. The story must be concise, practical, and interesting in itself, just like a novel or a tale. Don\'t write stuff like "Sarah and Mark had a disagreement about their future plans, but by active listening they found a compromise", write stuff like "Sarah wanted to move to Canada from the US, and Mark wanted to stay at the US. Instead of arguing why it\'s better to stay at the US, Mark tried to understand why Sarah tried to leave in the first place. It turned out that she wanted to get as far as possible from her toxic family, so Mark helped to make the relationship with her family better, therefore removing the need to move from the US". Do not use this exact story or one with a similar plot. It is very important that you don\'t use this exact story or one with a similar plot. Use names in your stories. Use specifics. Keep the text concise. End the text when the story ends, don\'t explain it too much. Don\'t say "embark on a journey", "world", "wonderful", "captivating", "thrilled", "fascinating", and similar strong adjectives, use something more relaxed. The host is a woman with MBTI INFJ type, genuinely caring about her viewers and willing to improve their life. Make the speech sound conversational. Call viewers simply "viewers of {channel_name}", without any adjectives. Don\'t write a script, write only the speech. I want you to simply write the text for reading without mentioning actions or roles. Don\'t put in stuff like "music playing" or "host: %host speech%". Give me the title, the speech, and your comments if you have any in the following format: "Title: ... \nSpeech: ... \n{MODEL} comment: ...'
 
                 speech = ask(speech_request)
 
-                update_speech_request = f'I have a script ChatGPT wrote for a YouTube video. ' \
-                                        f'Replace strong words like "embark on a journey", "world", "wonderful", "captivating", "thrilled", ' \
-                                        f'"fascinating" with something more natural and conversation-like. ' \
-                                        f'Call viewers simply "viewers of {channel_name}", without any adjectives, if you see stuff like ' \
-                                        f'"lovely viewers" - replace it. ' \
-                                        f'If there\'s any story about Sarah, Mark, or about someone moving from one country to another, ' \
-                                        f'replace it with a completely different story. That\'s the most important part of your task.' \
-                                        f'\nKeep the text extremely short, no longer than 30 seconds to read' \
-                                        f'\nGive me the title, the speech, ' \
-                                        f'and your comments if you have any in the following format: ' \
-                                        f'"Title: ... \nSpeech: ... \nChatGPT comment: ...\nHere\'s the original script: "{speech}"'
+                #update_speech_request = f'I have a script Claude wrote for a YouTube video. ' \
+                #                        f'Replace strong words like "embark on a journey", "world", "wonderful", "captivating", "thrilled", ' \
+                #                        f'"fascinating" with something more natural and conversation-like. ' \
+                #                        f'Call viewers simply "viewers of {channel_name}", without any adjectives, if you see stuff like ' \
+                #                        f'"lovely viewers" - replace it. ' \
+                #                        f'If there\'s any story about Sarah, Mark, or about someone moving from one country to another, ' \
+                #                        f'replace it with a completely different story. That\'s the most important part of your task.' \
+                #                        f'\nKeep the text extremely short, no longer than 30 seconds to read' \
+                #                        f'\nGive me the title, the speech, ' \
+                #                        f'and your comments if you have any in the following format: ' \
+                #                        f'"Title: ... \nSpeech: ... \nClaude comment: ...\nHere\'s the original script: "{speech}"'
 
-
-                update_speech = ask(update_speech_request)
+                # update_speech = ask(update_speech_request)
                 update_speech = speech
                 speech_start = update_speech.lower().find('speech:')
-                speech_fin = update_speech.lower().find('chatgpt comment:')
+                speech_fin = update_speech.lower().find(f'{MODEL} comment:')
                 if speech_fin == -1:
-                    update_speech = update_speech[speech_start+7:]
+                    update_speech = update_speech[speech_start + 7:]
                 else:
-                    update_speech = update_speech[speech_start + 7 : speech_fin]
+                    update_speech = update_speech[speech_start + 7: speech_fin]
                 if any(c in update_speech.lower() for c in match):
                     t += 1
                     print(f'writing another speech for {channel_name}')
@@ -99,7 +122,7 @@ def get_speech(channel):
                 raise IndexError
 
             ret = [channel, main_topic, update_speech]
-            return(ret)
+            return (ret)
 
         except Exception as fuu:
             print(f'error {fuu}, restarting for {channel_name}')
@@ -150,6 +173,7 @@ def dep_say_w(channelXfile_nameXspeech):
 
     print(f"audio on topic {file_name} for channel {channel} complete")
     """
+
 
 def say_w(channelXfile_nameXspeech):
     """
@@ -309,8 +333,10 @@ def make_video(channelXfile_nameXspeech):
         clip_names = nature_names + couples_names + people_chill_names
     elif channel in ['Empathy Elevator - Emotional Intelligence Development']:
         clip_names = nature_names + cities_names + people_chill_names + people_work_names
+    elif channel in ['Empathy for Kids - Teaching Empathy and Emotional Intelligence to young children']:
+        clip_names = nature_names + people_chill_names
     else:
-        clip_names = nature_names + couples_names + people_chill_names + people_work_names + cities_names
+        clip_names = nature_names + people_chill_names + people_work_names + cities_names
     clips_for_use = sample(clip_names, clips_amount)
 
     # now let's add music, speech and subs
@@ -462,8 +488,9 @@ def make_video(channelXfile_nameXspeech):
         .concat(
             video
             .filter('subtitles', filename=f'audio/{channel}/{file_name}.srt',
-            #        fontsdir="C:\Windows\Fonts",
-                    force_style='Fontname=Futura,Fontsize=24,Outline=1,Shadow=2,BackColour=&H7C0B43&,OutlineColour=&H7C0B43&', original_size='1280x720'),
+                    #        fontsdir="C:\Windows\Fonts",
+                    force_style='Fontname=Futura,Fontsize=24,Outline=1,Shadow=2,BackColour=&H7C0B43&,OutlineColour=&H7C0B43&',
+                    original_size='1280x720'),
             audio,
             v=1,
             a=1
@@ -474,15 +501,18 @@ def make_video(channelXfile_nameXspeech):
 
     # getting rid of composing files
 
-    #os.remove(f'video/{channel}/{file_name}_silent.mp4')
-    #os.remove(f'video/{channel}/{file_name}_silent_frame.mp4')
-    #os.remove(f'video/{channel}/{file_name}_silent_frame_text.mp4')
-    #for i in range(len(text_list)-1):
+    # os.remove(f'video/{channel}/{file_name}_silent.mp4')
+    # os.remove(f'video/{channel}/{file_name}_silent_frame.mp4')
+    # os.remove(f'video/{channel}/{file_name}_silent_frame_text.mp4')
+    # for i in range(len(text_list)-1):
     #    os.remove(f'video/{channel}/{file_name}_silent_frame_text{i}.mp4')
     os.remove(f'C:video\\{channel}\\{file_name}_silent_overlayed.mp4')
     os.remove(f"audio/{channel}/{file_name}_with_music.mp3")
     os.remove(f"audio/{channel}/{file_name}.srt")
     os.remove(f"audio/{channel}/{file_name}.mp3")
+
+    return(f'video/{channel}/{file_name}.mp4')
+
 
 def check_and_create_file(directory, filename):
     # Check if the directory exists, if not, create it
@@ -506,20 +536,22 @@ def check_and_create_file(directory, filename):
         except Exception as e:
             print(f"Error creating file '{filename}' in '{directory}': {e}")
 
-# Example usage:
+def prepare_video(new_channel, choose_channel, amount=1):
+    if new_channel != '':
+        new_channel += '.txt'
+        channel_list = [new_channel]
+        # creating folders for first-time used channels
+        if not check_and_create_file(directory='channels', filename=new_channel):
+            check_and_create_file(directory=f'video/{new_channel[:-4]}', filename=new_channel)
+            check_and_create_file(directory=f'audio/{new_channel[:-4]}', filename=new_channel)
+    elif choose_channel != '':
+        choose_channel += '.txt'
+        channel_list = [choose_channel]
+    else:
+        print("Error: no input")
+        return 0
 
-if __name__ == "__main__":
-
-    #channel_list = os.listdir('channels')
-    channel_list = ['Empathy Elevator - Teaching Empathy and Emotional Intelligence.txt',
-                    'Empathy for Kids - Teaching Empathy and Emotional Intelligence to young children.txt',
-                    'Road to MIT - Admissions Secrets (100% legit).txt']
-
-    # creating folders for first-time used channels
-    for channel in channel_list:
-        if not check_and_create_file(directory='channels', filename=channel):
-            check_and_create_file(directory=f'video/{channel[:-4]}', filename=channel)
-            check_and_create_file(directory=f'audio/{channel[:-4]}', filename=channel)
+    channel_list *= amount
 
     # writing text
     speech_pool = Pool()
@@ -534,8 +566,33 @@ if __name__ == "__main__":
     voice_pool.join()
 
     # preparing videos
+    video_paths = []
     for channelXtopicXspeech in channelXtopicsXspeeches_list:
         try:
-            make_video(channelXtopicXspeech)
+            video_paths.append(make_video(channelXtopicXspeech))
         except Exception as ex:
             print(ex)
+    while len(video_paths) < 5:
+        video_paths.append("video/placeholder.mp4")
+    return(video_paths)
+
+
+def show_channels():
+    channels = []
+    for ch in os.listdir('channels'):
+        channels.append(ch[:-4])
+    return(channels)
+
+if __name__ == "__main__":
+
+    demo = gr.Interface(
+        fn=prepare_video,
+        inputs=[
+            gr.Text(label="add new channel"),
+            gr.Dropdown(choices=show_channels()),
+            gr.Slider(1, 5, value=1, step=1, label="Amount", info="Amount of videos to generate")
+        ],
+        outputs=['video' for i in range(5)]
+    )
+
+    demo.launch()
